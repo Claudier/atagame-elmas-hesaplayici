@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101827"><title>MLBB Elmas / TL Hesaplayıcı</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--card:#142137;--muted:#9aabc2;--cyan:#53c8f2;--green:#67e2b1;--line:#ffffff20}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;padding:26px 15px;display:grid;place-items:center;background:radial-gradient(circle at 15% 10%,#2374a333,transparent 32%),radial-gradient(circle at 90% 90%,#32bd9230,transparent 30%),var(--bg);font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#eef5ff}
+main{width:min(100%,520px)}.brand{display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:20px}.logo{width:48px;height:48px;display:grid;place-items:center;border:1px solid #53c8f255;border-radius:15px;color:var(--cyan);background:#53c8f21c;font-size:27px}.brand h1{font-size:19px;margin:0}.brand p{font-size:12px;color:var(--muted);margin:3px 0 0}
+.card{background:linear-gradient(150deg,#17263e,#101b2e);border:1px solid var(--line);border-radius:24px;padding:23px;box-shadow:0 22px 65px #0006}.desc{font-size:13px;line-height:1.55;color:var(--muted);margin:0 0 20px}
+label{display:block;font-size:13px;font-weight:700;margin:16px 0 8px}select,input{width:100%;padding:14px;border:1px solid var(--line);border-radius:12px;background:#0b1628;color:#f3f7ff;font-size:16px;outline:none}select:focus,input:focus{border-color:var(--cyan)}
+.result{margin-top:20px;padding:19px;border-radius:17px;background:linear-gradient(135deg,#53c8f21b,#67e2b111);border:1px solid #53c8f244}.eyebrow{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}.big{font-size:37px;font-weight:850;color:var(--green);margin:7px 0}.sub{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:11px}.mini{padding:12px;background:#07111f66;border:1px solid var(--line);border-radius:12px}.mini small{display:block;color:var(--muted);margin-bottom:5px}.mini b{font-size:15px}
+button{width:100%;border:0;border-radius:12px;background:var(--cyan);color:#071522;font-weight:800;padding:13px;margin-top:16px;cursor:pointer}button:disabled{opacity:.55;cursor:wait}
+.status{display:flex;align-items:center;gap:7px;margin-top:14px;font-size:11px;color:var(--muted);line-height:1.5}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex:none}.warning .dot{background:#f5bd58}
+.source{display:block;text-align:center;color:#8fa6c2;font-size:11px;margin-top:13px;text-decoration:none}.source:hover{color:var(--cyan)}.foot{text-align:center;color:#70829a;font-size:10px;line-height:1.5;margin:15px 8px}
+</style></head>
+<body><main>
+<header class="brand"><div class="logo" aria-hidden="true">💎</div><div><h1>MLBB Elmas / TL</h1><p>Atagame fiyatlarıyla canlı hesaplama</p></div></header>
+<section class="card">
+<p class="desc">Atagame'deki MLBB Türkiye paketlerinden birini seç veya kendi elmas miktarını gir. Paket başına ve elmas başına maliyet otomatik hesaplanır.</p>
+<label for="package">💎 Atagame elmas paketi</label><select id="package"><option value="">Fiyatlar yükleniyor…</option></select>
+<label for="custom">Özel elmas miktarı</label><input id="custom" type="number" min="1" step="1" placeholder="Örn. 1535">
+<div class="result" aria-live="polite"><div class="eyebrow">1 elmasın karşılığı</div><div class="big" id="unit">—</div><div class="sub" id="summary">Paket seçildiğinde hesaplanır.</div></div>
+<div class="grid"><div class="mini"><small>100 elmas</small><b id="hundred">—</b></div><div class="mini"><small>1.000 elmas</small><b id="thousand">—</b></div></div>
+<label for="manualPrice">İstersen fiyatı kendin de girebilirsin (TL)</label><input id="manualPrice" type="number" min="0" step="0.01" placeholder="Seçilen paketin fiyatı">
+<button id="refresh">↻ Fiyatları şimdi güncelle</button>
+<div class="status" id="status"><span class="dot"></span><span>Atagame fiyatları kontrol ediliyor…</span></div>
+<a class="source" href="https://www.atagame.net/mobile-legends-bang-bang-tr-c-132/" target="_blank" rel="noopener">Fiyat kaynağı: Atagame MLBB Türkiye ↗</a>
+</section><p class="foot">Fiyatlar sunucu üzerinden okunur. Atagame sayfa yapısını veya erişim kurallarını değiştirirse otomatik okuma durabilir. Bu durumda son bilinen fiyatlar korunur.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);let products=[];
+const money=n=>new Intl.NumberFormat('tr-TR',{style:'currency',currency:'TRY',minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+function calculate(){
+ const selected=$('package').value;
+ const p=products.find(x=>String(x.diamonds)===selected);
+ const custom=Number($('custom').value);
+ const count=custom>0?custom:(p?p.diamonds:0);
+ const priceText=$('manualPrice').value;
+ const price=priceText!==''?Number(priceText):(p?p.price:NaN);
+ if(!(count>0)||!Number.isFinite(price)||price<0){$('unit').textContent='—';$('summary').textContent='Geçerli bir paket veya elmas miktarı seç.';$('hundred').textContent='—';$('thousand').textContent='—';return}
+ const rate=price/count;
+ $('unit').textContent=rate.toLocaleString('tr-TR',{minimumFractionDigits:4,maximumFractionDigits:6})+' ₺';
+ $('summary').textContent=count.toLocaleString('tr-TR')+' elmas · '+money(price)+' toplam';
+ $('hundred').textContent=money(rate*100);$('thousand').textContent=money(rate*1000);
+}
+function setStatus(message,warning=false){$('status').classList.toggle('warning',warning);$('status').innerHTML='<span class="dot"></span><span></span>';$('status').lastChild.textContent=message}
+async function refresh(){
+ const btn=$('refresh');btn.disabled=true;btn.textContent='Fiyatlar kontrol ediliyor…';
+ try{
+  const response=await fetch('/api/prices',{cache:'no-store'});
+  if(!response.ok)throw new Error('Sunucu yanıt vermedi');
+  const data=await response.json();if(!Array.isArray(data.products)||!data.products.length)throw new Error('Ürün listesi boş');
+  const previous=$('package').value;products=data.products;
+  $('package').innerHTML=products.map(p=>`<option value="${p.diamonds}">${p.diamonds.toLocaleString('tr-TR')} elmas — ${money(p.price)}</option>`).join('');
+  if(products.some(p=>String(p.diamonds)===previous))$('package').value=previous;
+  $('custom').value='';$('manualPrice').value='';calculate();
+  if(data.fallback)setStatus(data.warning||'Yedek fiyatlar gösteriliyor; canlı veri alınamadı.',true);
+  else setStatus('Fiyatlar başarıyla kontrol edildi. '+(data.cached?'Önbellekteki son güncel veri kullanıldı.':'Kaynak sayfadan yenilendi.'));
+ }catch(e){setStatus('Fiyatlar alınamadı. Sunucunun çalıştığını kontrol et.',true)}
+ finally{btn.disabled=false;btn.textContent='↻ Fiyatları şimdi güncelle'}
+}
+$('package').addEventListener('change',()=>{$('custom').value='';$('manualPrice').value='';calculate()});
+$('custom').addEventListener('input',calculate);$('manualPrice').addEventListener('input',calculate);
+$('refresh').addEventListener('click',refresh);refresh();
+</script></body></html>
